@@ -47,13 +47,33 @@ jobs:
       - name: Sync web assets
         run: npx cap sync android
 
+      - name: Copy Adhan sounds to Android raw resources
+        run: |
+          RAW_DIR="android/app/src/main/res/raw"
+          mkdir -p "$RAW_DIR"
+          # الأسماء: بالحروف الصغيرة فقط بدون شرطات
+          if [ -f sounds/adhan1.mp3 ]; then
+            cp sounds/adhan1.mp3 "$RAW_DIR/adhan1.mp3"
+            echo "✓ adhan1.mp3 copied"
+          fi
+          if [ -f sounds/adhan2.mp3 ]; then
+            cp sounds/adhan2.mp3 "$RAW_DIR/adhan2.mp3"
+            echo "✓ adhan2.mp3 copied"
+          fi
+          if [ -f sounds/adhan_fajr.mp3 ]; then
+            cp sounds/adhan_fajr.mp3 "$RAW_DIR/adhan_fajr.mp3"
+            echo "✓ adhan_fajr.mp3 copied"
+          fi
+          echo "=== Raw folder contents ==="
+          ls -la "$RAW_DIR/"
+
       - name: Add Android permissions to manifest
         run: |
           MANIFEST="android/app/src/main/AndroidManifest.xml"
           if [ -f "$MANIFEST" ]; then
             sed -i 's|</manifest>|    <uses-permission android:name="android.permission.INTERNET" />\n    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\n    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\n    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />\n    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />\n    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />\n    <uses-permission android:name="android.permission.WAKE_LOCK" />\n    <uses-permission android:name="android.permission.VIBRATE" />\n</manifest>|' "$MANIFEST"
             echo "=== Manifest permissions ==="
-            grep -A 20 "uses-permission" "$MANIFEST" || true
+            grep "uses-permission" "$MANIFEST" || true
           fi
 
       - name: Grant execute permission for gradlew
