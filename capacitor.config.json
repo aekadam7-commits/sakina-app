@@ -8,8 +8,8 @@
   },
   "plugins": {
     "LocalNotifications": {
-      "smallIcon": "ic_stat_icon_config_sample",
-      "iconColor": "#0b2e2a",
+      "smallIcon": "ic_stat_adhan",
+      "iconColor": "#c9a961",
       "sound": "adhan1"
     }
   }
