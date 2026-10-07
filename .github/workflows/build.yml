@@ -47,11 +47,14 @@ jobs:
       - name: Sync web assets
         run: npx cap sync android
 
-      - name: Copy Adhan sounds to Android raw resources
+      - name: Create notification icon (white monochrome)
         run: |
           RAW_DIR="android/app/src/main/res/raw"
+          DRAWABLE_DIR="android/app/src/main/res/drawable"
           mkdir -p "$RAW_DIR"
-          # الأسماء: بالحروف الصغيرة فقط بدون شرطات
+          mkdir -p "$DRAWABLE_DIR"
+
+          # نسخ أصوات الأذان
           if [ -f sounds/adhan1.mp3 ]; then
             cp sounds/adhan1.mp3 "$RAW_DIR/adhan1.mp3"
             echo "✓ adhan1.mp3 copied"
@@ -64,14 +67,36 @@ jobs:
             cp sounds/adhan_fajr.mp3 "$RAW_DIR/adhan_fajr.mp3"
             echo "✓ adhan_fajr.mp3 copied"
           fi
-          echo "=== Raw folder contents ==="
+
+          # إنشاء أيقونة إشعار مخصصة (SVG أبيض + شفاف)
+          cat > /tmp/ic_stat_adhan.svg << 'SVGEOF'
+          <svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96">
+            <path fill="#FFFFFF" d="M48 8 L48 20 M40 20 L56 20 L56 26 L40 26 Z M32 30 L64 30 L64 40 L32 40 Z M44 32 L44 40 M52 32 L52 40 Z M28 44 L68 44 L68 60 L28 60 Z M44 48 L44 56 M52 48 L52 56 Z M24 64 L72 64 L72 84 L24 84 Z M44 68 L44 80 M52 68 L52 80 Z M8 88 L88 88 L88 92 L8 92 Z"/>
+          </svg>
+          SVGEOF
+
+          # محاولة تحويل SVG إلى PNG (بديل: نسخ SVG)
+          if command -v convert &> /dev/null; then
+            convert -background none -resize 96x96 /tmp/ic_stat_adhan.svg "$DRAWABLE_DIR/ic_stat_adhan.png"
+            echo "✓ ic_stat_adhan.png created"
+          else
+            # إن لم يكن ImageMagick متوفرًا، نستخدم شكل بسيط من android
+            echo "⚠️ ImageMagick غير متوفر — استخدام أيقونة android الافتراضية"
+            # استخدام أيقونة بسيطة موجودة
+            if [ -d "$DRAWABLE_DIR" ]; then
+              # نسخة احتياطية: استخدام drawable موجود
+              find "$DRAWABLE_DIR" -name "*.png" | head -1 | xargs -I {} cp {} "$DRAWABLE_DIR/ic_stat_adhan.png" 2>/dev/null || true
+            fi
+          fi
+
+          echo "=== Raw folder ==="
           ls -la "$RAW_DIR/"
 
       - name: Add Android permissions to manifest
         run: |
           MANIFEST="android/app/src/main/AndroidManifest.xml"
           if [ -f "$MANIFEST" ]; then
-            sed -i 's|</manifest>|    <uses-permission android:name="android.permission.INTERNET" />\n    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\n    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\n    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />\n    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />\n    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />\n    <uses-permission android:name="android.permission.WAKE_LOCK" />\n    <uses-permission android:name="android.permission.VIBRATE" />\n</manifest>|' "$MANIFEST"
+            sed -i 's|</manifest>|    <uses-permission android:name="android.permission.INTERNET" />\n    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\n    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\n    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />\n    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />\n    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />\n    <uses-permission android:name="android.permission.WAKE_LOCK" />\n    <uses-permission android:name="android.permission.VIBRATE" />\n    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />\n    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />\n</manifest>|' "$MANIFEST"
             echo "=== Manifest permissions ==="
             grep "uses-permission" "$MANIFEST" || true
           fi
