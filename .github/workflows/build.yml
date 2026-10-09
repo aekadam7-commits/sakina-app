@@ -47,49 +47,39 @@ jobs:
       - name: Sync web assets
         run: npx cap sync android
 
-      - name: Create notification icon (white monochrome)
+      - name: Copy Adhan & Dua sounds to Android raw resources
         run: |
           RAW_DIR="android/app/src/main/res/raw"
           DRAWABLE_DIR="android/app/src/main/res/drawable"
           mkdir -p "$RAW_DIR"
           mkdir -p "$DRAWABLE_DIR"
 
-          # نسخ أصوات الأذان
-          if [ -f sounds/adhan1.mp3 ]; then
-            cp sounds/adhan1.mp3 "$RAW_DIR/adhan1.mp3"
-            echo "✓ adhan1.mp3 copied"
-          fi
-          if [ -f sounds/adhan2.mp3 ]; then
-            cp sounds/adhan2.mp3 "$RAW_DIR/adhan2.mp3"
-            echo "✓ adhan2.mp3 copied"
-          fi
-          if [ -f sounds/adhan_fajr.mp3 ]; then
-            cp sounds/adhan_fajr.mp3 "$RAW_DIR/adhan_fajr.mp3"
-            echo "✓ adhan_fajr.mp3 copied"
-          fi
-
-          # إنشاء أيقونة إشعار مخصصة (SVG أبيض + شفاف)
-          cat > /tmp/ic_stat_adhan.svg << 'SVGEOF'
-          <svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96">
-            <path fill="#FFFFFF" d="M48 8 L48 20 M40 20 L56 20 L56 26 L40 26 Z M32 30 L64 30 L64 40 L32 40 Z M44 32 L44 40 M52 32 L52 40 Z M28 44 L68 44 L68 60 L28 60 Z M44 48 L44 56 M52 48 L52 56 Z M24 64 L72 64 L72 84 L24 84 Z M44 68 L44 80 M52 68 L52 80 Z M8 88 L88 88 L88 92 L8 92 Z"/>
-          </svg>
-          SVGEOF
-
-          # محاولة تحويل SVG إلى PNG (بديل: نسخ SVG)
-          if command -v convert &> /dev/null; then
-            convert -background none -resize 96x96 /tmp/ic_stat_adhan.svg "$DRAWABLE_DIR/ic_stat_adhan.png"
-            echo "✓ ic_stat_adhan.png created"
-          else
-            # إن لم يكن ImageMagick متوفرًا، نستخدم شكل بسيط من android
-            echo "⚠️ ImageMagick غير متوفر — استخدام أيقونة android الافتراضية"
-            # استخدام أيقونة بسيطة موجودة
-            if [ -d "$DRAWABLE_DIR" ]; then
-              # نسخة احتياطية: استخدام drawable موجود
-              find "$DRAWABLE_DIR" -name "*.png" | head -1 | xargs -I {} cp {} "$DRAWABLE_DIR/ic_stat_adhan.png" 2>/dev/null || true
+          # نسخ أصوات الأذان والدعاء
+          for sound in adhan1 adhan2 adhan_fajr dua_adhan; do
+            if [ -f "sounds/${sound}.mp3" ]; then
+              cp "sounds/${sound}.mp3" "$RAW_DIR/${sound}.mp3"
+              echo "✓ ${sound}.mp3 copied"
+            else
+              echo "⚠️ sounds/${sound}.mp3 NOT FOUND"
             fi
-          fi
+          done
 
-          echo "=== Raw folder ==="
+          # إنشاء أيقونة إشعار مخصصة (كعبة بيضاء)
+          cat > "$DRAWABLE_DIR/ic_stat_adhan.xml" << 'XMLEOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <vector xmlns:android="http://schemas.android.com/apk/res/android"
+              android:width="96dp"
+              android:height="96dp"
+              android:viewportWidth="96"
+              android:viewportHeight="96">
+            <path
+                android:fillColor="#FFFFFF"
+                android:pathData="M48,8 L48,20 M40,20 L56,20 L56,26 L40,26 Z M32,30 L64,30 L64,40 L32,40 Z M44,32 L44,40 M52,32 L52,40 Z M28,44 L68,44 L68,60 L28,60 Z M44,48 L44,56 M52,48 L52,56 Z M24,64 L72,64 L72,84 L24,84 Z M44,68 L44,80 M52,68 L52,80 Z M8,88 L88,88 L88,92 L8,92 Z"/>
+          </vector>
+          XMLEOF
+          echo "✓ ic_stat_adhan.xml created"
+
+          echo "=== Raw folder contents ==="
           ls -la "$RAW_DIR/"
 
       - name: Add Android permissions to manifest
